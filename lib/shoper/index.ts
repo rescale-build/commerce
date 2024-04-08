@@ -1,3 +1,3 @@
-export default async function shoperRequet() {
+export default async function storeRequest() {
   return fetch('https://localhost:8080');
 }
