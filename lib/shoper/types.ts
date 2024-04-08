@@ -37,6 +37,12 @@ export interface Product {
   main_image?: MainImage;
   stock: Stock;
   translations: Record<string, Translation>;
+  attributes: Record<string, Record<string, number>>;
+  categories: number[];
+  special_offer: SpecialOffer;
+  unit_price_calculation: boolean;
+  children: ProductChildren;
+  feeds_excludes: number[];
 }
 
 export interface MainImage {
@@ -93,4 +99,25 @@ export interface Stock {
   historical_lowest_price: number;
   wholesale_historical_lowest_price: number;
   special_historical_lowest_price: number;
+}
+
+export interface SpecialOffer {
+  promo_id: number;
+  date_from: string;
+  date_to: string;
+  discount: number;
+  discount_wholesale: number;
+  discount_special: number;
+  discount_type: number;
+  condition_type: number;
+  stocks: number[];
+}
+
+export interface ProductChildren {
+  id: number;
+  bundle_id: number;
+  stock_id: number;
+  product_id: number;
+  stock: number;
+  order: number;
 }
