@@ -72,11 +72,6 @@ export class Store {
       }
     });
 
-    console.log(
-      access_token,
-      `Basic ${Buffer.from(`${process.env.SHOPER_CLIENT_ID}:${process.env.SHOPER_CLIENT_SECRET}`).toString('base64')}`
-    );
-
     this.storeToken = access_token;
 
     return access_token;
