@@ -1,7 +1,7 @@
 import { DEFAULT_TAGS } from './constants';
-import { Product } from './types';
+import { AuthResponse, Product } from './types';
 
-interface StoreReqeustProps {
+interface StoreFetchProps {
   urlProps?: string[];
   tags?: string[];
   cache?: RequestCache;
@@ -11,7 +11,7 @@ interface StoreReqeustProps {
 
 export default async function storeFetch<T>(
   endpoint: string,
-  { urlProps, tags, cache, headers, revalidate }: Readonly<StoreReqeustProps>
+  { urlProps, tags, cache, headers, revalidate }: Readonly<StoreFetchProps>
 ): Promise<T | never> {
   let url = `https://${process.env.SHOPER_STORE_DOMAIN}/webapi/rest/${endpoint}`;
 
@@ -63,18 +63,20 @@ export class Store {
       return this.storeToken;
     }
 
-    const response = await fetch(`https://${process.env.SHOPER_STORE_DOMAIN}/webapi/rest/`, {
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${process.env.SHOPER_STORE_API_KEY}`
+    const response = await fetch(
+      `https://${process.env.SHOPER_STORE_DOMAIN}/webapi/rest/oauth/token?grant_type=authorization_code`,
+      {
+        headers: {
+          'Content-Type': 'application/json'
+        }
       }
-    });
+    );
 
-    const { token } = await response.json();
+    const { access_token } = (await response.json()) as AuthResponse;
 
-    this.storeToken = token;
+    this.storeToken = access_token;
 
-    return token;
+    return access_token;
   }
 
   /**
