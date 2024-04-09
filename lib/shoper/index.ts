@@ -7,11 +7,12 @@ interface StoreFetchProps {
   cache?: RequestCache;
   headers?: HeadersInit;
   revalidate?: number | false;
+  method?: RequestInit['method'];
 }
 
 export default async function storeFetch<T>(
   endpoint: string,
-  { urlProps, tags, cache, headers, revalidate }: Readonly<StoreFetchProps>
+  { urlProps, tags, cache, headers, revalidate, method }: Readonly<StoreFetchProps>
 ): Promise<T | never> {
   let url = `https://${process.env.SHOPER_STORE_DOMAIN}/webapi/rest/${endpoint}`;
 
@@ -21,6 +22,7 @@ export default async function storeFetch<T>(
 
   try {
     const response = await fetch(url, {
+      method,
       cache,
       headers: {
         'Content-Type': 'application/json',
@@ -63,16 +65,17 @@ export class Store {
       return this.storeToken;
     }
 
-    const response = await fetch(
-      `https://${process.env.SHOPER_STORE_DOMAIN}/webapi/rest/oauth/token?grant_type=authorization_code`,
-      {
-        headers: {
-          'Content-Type': 'application/json'
-        }
+    const { access_token } = await storeFetch<AuthResponse>('auth', {
+      method: 'POST',
+      headers: {
+        Authorization: `Basic ${Buffer.from(`${process.env.SHOPER_CLIENT_ID}:${process.env.SHOPER_CLIENT_SECRET}`).toString('base64')}`
       }
-    );
+    });
 
-    const { access_token } = (await response.json()) as AuthResponse;
+    console.log(
+      access_token,
+      `Basic ${Buffer.from(`${process.env.SHOPER_CLIENT_ID}:${process.env.SHOPER_CLIENT_SECRET}`).toString('base64')}`
+    );
 
     this.storeToken = access_token;
 
@@ -83,11 +86,12 @@ export class Store {
    * The product endpoint.
    */
   public product = {
-    endpoint: '/product',
-    get: async (): Promise<Product> => {
-      const token = await this.getToken();
+    endpoint: 'products',
+    get: async (id: Product['product_id']): Promise<Product> => {
+      const token = this.storeToken ?? (await this.getToken());
 
       return storeFetch<Product>(this.product.endpoint, {
+        urlProps: [id.toString()],
         tags: ['product'],
         headers: {
           Authorization: `Bearer ${token}`
@@ -95,7 +99,7 @@ export class Store {
       });
     },
     list: async (): Promise<Product[]> => {
-      const token = await this.getToken();
+      const token = this.storeToken ?? (await this.getToken());
 
       return storeFetch<Product[]>(this.product.endpoint, {
         tags: ['product', 'product-list'],
