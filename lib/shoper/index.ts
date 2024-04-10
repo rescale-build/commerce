@@ -8,7 +8,14 @@ interface StoreFetchProps {
   headers?: HeadersInit;
   revalidate?: number | false;
   method?: RequestInit['method'];
+  searchParams?: ApiOptions;
 }
+
+interface StoreConstuctorProps {
+  storeDomain?: string;
+}
+
+type ApiOptions = Record<string, string>;
 
 export class Store {
   /**
@@ -18,37 +25,50 @@ export class Store {
   private storeToken?: string;
 
   /**
+   * The store domain.
+   * @private
+   */
+  private storeDomain: string = process.env.SHOPER_STORE_DOMAIN!;
+
+  /**
    * The Shoper API URL.
    * @private
    */
-  private apiURL: string = `https://${process.env.SHOPER_STORE_DOMAIN}/webapi/rest/`;
+  private apiURL: string = `https://${this.storeDomain}/webapi/rest/`;
 
   /**
    * Fetches the store token from the Shoper API.
    */
-  constructor() {}
+  constructor(props?: Readonly<StoreConstuctorProps>) {
+    const { storeDomain } = props ?? {};
+
+    if (storeDomain) {
+      this.storeDomain = storeDomain;
+    }
+  }
 
   /**
    * Fetches data from the Shoper API.
    * @param endpoint
-   * @param urlProps
-   * @param tags
-   * @param cache
-   * @param headers
-   * @param revalidate
-   * @param method
+   * @param props
    * @private
    * @returns The fetched data.
    * @throws If the request fails.
    */
   private async storeFetch<T>(
     endpoint: string,
-    { urlProps, tags, cache, headers, revalidate, method }: Readonly<StoreFetchProps>
+    props?: Readonly<StoreFetchProps>
   ): Promise<T | never> {
+    const { urlProps, tags, cache, headers, revalidate, method, searchParams } = props ?? {};
+
     let url = `${this.apiURL}${endpoint}`;
 
     if (urlProps) {
       url = `${url}/${urlProps.join('/')}/`;
+    }
+
+    if (searchParams) {
+      url = `${url}?${new URLSearchParams(searchParams).toString()}`;
     }
 
     const computedTags = (tags ?? []).concat([endpoint]).concat(DEFAULT_TAGS);
@@ -119,9 +139,10 @@ export class Store {
     /**
      * Fetches a list of products from the Shoper API.
      */
-    list: async (): Promise<Product[]> => {
+    list: async (options?: ApiOptions): Promise<Product[]> => {
       return this.storeFetch<Product[]>(this.products.endpoint, {
-        tags: ['product-list']
+        tags: ['product-list'],
+        searchParams: options
       });
     }
   };

@@ -37,3 +37,16 @@ export const validateEnvironmentVariables = () => {
     );
   }
 };
+
+export function encodeSearchParams(params: { [key: string]: any }): string {
+  const encodedParams: string[] = [];
+  for (const key in params) {
+    if (params.hasOwnProperty(key)) {
+      const value = params[key];
+      if (value !== undefined) {
+        encodedParams.push(`${encodeURIComponent(key)}=${encodeURIComponent(value)}`);
+      }
+    }
+  }
+  return encodedParams.join('&');
+}
