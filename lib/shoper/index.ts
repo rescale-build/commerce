@@ -80,7 +80,7 @@ export class Store {
   /**
    * The product endpoint.
    */
-  public product = {
+  public products = {
     endpoint: 'products',
     /**
      * Fetches a product from the Shoper API.
@@ -89,7 +89,7 @@ export class Store {
     get: async (id: Product['product_id']): Promise<Product> => {
       const token = this.storeToken ?? (await this.getToken());
 
-      return storeFetch<Product>(this.product.endpoint, {
+      return storeFetch<Product>(this.products.endpoint, {
         urlProps: [id.toString()],
         tags: ['product', id.toString()],
         headers: {
@@ -103,7 +103,7 @@ export class Store {
     list: async (): Promise<Product[]> => {
       const token = this.storeToken ?? (await this.getToken());
 
-      return storeFetch<Product[]>(this.product.endpoint, {
+      return storeFetch<Product[]>(this.products.endpoint, {
         tags: ['product', 'product-list'],
         headers: {
           Authorization: `Bearer ${token}`
