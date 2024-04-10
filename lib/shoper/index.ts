@@ -94,7 +94,7 @@ export class Store {
       }
     });
 
-    const { access_token } = await response.json();
+    const { access_token } = (await response.json()) as AuthResponse;
 
     this.storeToken = access_token;
 
