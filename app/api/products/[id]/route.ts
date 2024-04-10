@@ -6,6 +6,6 @@ export async function GET(
   request: NextRequest,
   { params }: { params: { id: Product['product_id'] } }
 ) {
-  const products = await storeClient.product.get(params.id);
+  const products = await storeClient.products.get(params.id);
   return NextResponse.json(products);
 }
