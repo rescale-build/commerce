@@ -10,38 +10,6 @@ interface StoreFetchProps {
   method?: RequestInit['method'];
 }
 
-export default async function storeFetch<T>(
-  endpoint: string,
-  { urlProps, tags, cache, headers, revalidate, method }: Readonly<StoreFetchProps>
-): Promise<T | never> {
-  let url = `https://${process.env.SHOPER_STORE_DOMAIN}/webapi/rest/${endpoint}`;
-
-  if (urlProps) {
-    url = `${url}/${urlProps.join('/')}/`;
-  }
-
-  try {
-    const response = await fetch(url, {
-      method,
-      cache,
-      headers: {
-        'Content-Type': 'application/json',
-        ...headers
-      },
-      next: {
-        tags: (tags ?? []).concat(DEFAULT_TAGS),
-        revalidate
-      }
-    });
-
-    return response.json() as T;
-  } catch (e) {
-    throw {
-      error: e
-    };
-  }
-}
-
 export class Store {
   /**
    * The store token used to authenticate requests to the Shoper API.
@@ -50,10 +18,64 @@ export class Store {
   private storeToken?: string;
 
   /**
+   * The Shoper API URL.
+   * @private
+   */
+  private apiURL: string = `https://${process.env.SHOPER_STORE_DOMAIN}/webapi/rest/`;
+
+  /**
    * Fetches the store token from the Shoper API.
    */
-  constructor() {
-    void this.getToken();
+  constructor() {}
+
+  /**
+   * Fetches data from the Shoper API.
+   * @param endpoint
+   * @param urlProps
+   * @param tags
+   * @param cache
+   * @param headers
+   * @param revalidate
+   * @param method
+   * @private
+   * @returns The fetched data.
+   * @throws If the request fails.
+   */
+  private async storeFetch<T>(
+    endpoint: string,
+    { urlProps, tags, cache, headers, revalidate, method }: Readonly<StoreFetchProps>
+  ): Promise<T | never> {
+    let url = `${this.apiURL}${endpoint}`;
+
+    if (urlProps) {
+      url = `${url}/${urlProps.join('/')}/`;
+    }
+
+    const computedTags = (tags ?? []).concat([endpoint]).concat(DEFAULT_TAGS);
+
+    try {
+      const token = await this.getToken();
+
+      const response = await fetch(url, {
+        method,
+        cache,
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+          ...headers
+        },
+        next: {
+          tags: computedTags,
+          revalidate
+        }
+      });
+
+      return response.json() as T;
+    } catch (e) {
+      throw {
+        error: e
+      };
+    }
   }
 
   /**
@@ -65,12 +87,14 @@ export class Store {
       return this.storeToken;
     }
 
-    const { access_token } = await storeFetch<AuthResponse>('auth', {
+    const response = await fetch(`${this.apiURL}auth`, {
       method: 'POST',
       headers: {
         Authorization: `Basic ${Buffer.from(`${process.env.SHOPER_CLIENT_ID}:${process.env.SHOPER_CLIENT_SECRET}`).toString('base64')}`
       }
     });
+
+    const { access_token } = await response.json();
 
     this.storeToken = access_token;
 
@@ -87,27 +111,42 @@ export class Store {
      * @param id
      */
     get: async (id: Product['product_id']): Promise<Product> => {
-      const token = this.storeToken ?? (await this.getToken());
-
-      return storeFetch<Product>(this.products.endpoint, {
+      return this.storeFetch<Product>(this.products.endpoint, {
         urlProps: [id.toString()],
-        tags: ['product', id.toString()],
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
+        tags: [id.toString()]
       });
     },
     /**
      * Fetches a list of products from the Shoper API.
      */
     list: async (): Promise<Product[]> => {
-      const token = this.storeToken ?? (await this.getToken());
+      return this.storeFetch<Product[]>(this.products.endpoint, {
+        tags: ['product-list']
+      });
+    }
+  };
 
-      return storeFetch<Product[]>(this.products.endpoint, {
-        tags: ['product', 'product-list'],
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
+  /**
+   * The product images endpoint.
+   */
+  public productImages = {
+    endpoint: 'product-images',
+    /**
+     * Fetches a product image from the Shoper API.
+     * @param id
+     */
+    get: async (id: Product['product_id']): Promise<Product> => {
+      return this.storeFetch<Product>(this.productImages.endpoint, {
+        urlProps: [id.toString()],
+        tags: [id.toString()]
+      });
+    },
+    /**
+     * Fetches a list of product images from the Shoper API.
+     */
+    list: async (): Promise<Product[]> => {
+      return this.storeFetch<Product[]>(this.productImages.endpoint, {
+        tags: ['product-images-list']
       });
     }
   };
